@@ -137,8 +137,9 @@ const page = `<!doctype html>
       }
       toggle.disabled = true;
       status.textContent = 'Waiting for camera permission…';
+      let cameraStream;
       try {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
         const model = await loadLandmarker();
         stream = cameraStream;
         video.srcObject = stream;
@@ -154,7 +155,7 @@ const page = `<!doctype html>
         lastInferenceAt = 0;
         frameRequest = requestAnimationFrame(trackFrame);
       } catch (error) {
-        if (typeof cameraStream !== 'undefined') cameraStream.getTracks().forEach(track => track.stop());
+        if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
         status.textContent = error.name === 'NotAllowedError'
           ? 'Allow camera access in your browser to continue'
           : 'Could not start camera or load the landmark model';
