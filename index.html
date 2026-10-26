@@ -51,7 +51,7 @@
     <p class="note">Face landmarks are detected in your browser. Camera video is not uploaded.</p>
   </main>
   <script type="module">
-    import { FaceLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs';
+    let mediaPipe;
 
     const video = document.querySelector('#video');
     const preview = document.querySelector('#preview');
@@ -76,15 +76,23 @@
 
     async function loadLandmarker() {
       if (landmarker) return landmarker;
-      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
-      landmarker = await FaceLandmarker.createFromOptions(vision, {
+      if (!mediaPipe) mediaPipe = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/vision_bundle.mjs');
+      const { FaceLandmarker, FilesetResolver } = mediaPipe;
+      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/wasm');
+      const options = {
         baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
         runningMode: 'VIDEO',
         numFaces: 1,
         minFaceDetectionConfidence: 0.5,
         minFacePresenceConfidence: 0.5,
         minTrackingConfidence: 0.5
-      });
+      };
+      try {
+        landmarker = await FaceLandmarker.createFromOptions(vision, options);
+      } catch {
+        options.baseOptions.delegate = 'CPU';
+        landmarker = await FaceLandmarker.createFromOptions(vision, options);
+      }
       return landmarker;
     }
 
@@ -140,7 +148,6 @@
       let cameraStream;
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-        const model = await loadLandmarker();
         stream = cameraStream;
         video.srcObject = stream;
         await video.play();
@@ -150,15 +157,23 @@
         empty.hidden = true;
         toggle.textContent = 'Stop camera';
         toggle.classList.remove('primary');
-        status.textContent = 'Looking for a face…';
+        status.textContent = 'Loading face landmark model…';
         lastVideoTime = -1;
         lastInferenceAt = 0;
-        frameRequest = requestAnimationFrame(trackFrame);
+        try {
+          await loadLandmarker();
+          status.textContent = 'Looking for a face…';
+          frameRequest = requestAnimationFrame(trackFrame);
+        } catch {
+          status.textContent = 'Camera is on, but face tracking could not load. Check your connection and retry.';
+        }
       } catch (error) {
         if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+        stream = undefined;
+        video.srcObject = null;
         status.textContent = error.name === 'NotAllowedError'
           ? 'Allow camera access in your browser to continue'
-          : 'Could not start camera or load the landmark model';
+          : 'Could not start the camera';
       } finally {
         toggle.disabled = false;
       }
