@@ -3,82 +3,187 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101311">
-  <title>Mirror | Face landmarks</title>
+  <meta name="theme-color" content="#11110f">
+  <meta name="description" content="A playful, private scream challenge. Your camera and microphone stay on your device.">
+  <title>Scream Test — Feardetector</title>
   <style>
-    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #101311; color: #f1f3ef; }
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #11110f; color: #f4f1e9; --ink:#11110f; --panel:#191a17; --line:#353630; --muted:#a3a396; --acid:#d6fb65; --pink:#ff5d70; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 28px; }
-    main { width: min(100%, 900px); }
-    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-    h1 { margin: 0; font-size: 1.1rem; font-weight: 600; letter-spacing: .02em; }
-    #status { color: #9ca59d; font-size: .85rem; }
-    .stage { position: relative; overflow: hidden; aspect-ratio: 4 / 3; min-height: 240px; border: 1px solid #343a35; border-radius: 14px; background: radial-gradient(ellipse at center, #202622, #151916 70%); }
-    .preview { position: absolute; inset: 0; }
-    .preview.mirrored { transform: scaleX(-1); }
-    video, canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
-    canvas { pointer-events: none; }
-    .empty { position: absolute; inset: 0; display: grid; place-content: center; gap: 8px; text-align: center; color: #9ca59d; pointer-events: none; }
-    .empty strong { color: #e4e9e3; font-size: .98rem; font-weight: 500; }
-    .empty span { font-size: .85rem; }
-    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 16px; }
-    button { border: 1px solid #424a43; border-radius: 9px; padding: 10px 15px; background: #202621; color: inherit; font: inherit; cursor: pointer; }
-    button:hover { background: #29332b; }
-    button.primary { color: #102014; border-color: #c9efb3; background: #c9efb3; font-weight: 600; }
-    button.primary:hover { background: #daf5ca; }
-    button:focus-visible, input:focus-visible + span { outline: 2px solid #c9efb3; outline-offset: 3px; }
-    label { display: inline-flex; align-items: center; gap: 9px; margin-left: auto; color: #c3cbc3; font-size: .9rem; cursor: pointer; }
-    input { accent-color: #c9efb3; width: 16px; height: 16px; }
-    .note { color: #9ca59d; font-size: .8rem; line-height: 1.5; margin: 12px 0 0; }
-    @media (max-width: 520px) { body { padding: 18px; } .stage { aspect-ratio: 3 / 4; } label { margin-left: 0; } }
+    body { margin: 0; min-height: 100svh; background: radial-gradient(ellipse at 15% 0%, #24251b 0%, var(--ink) 50%); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1120px, 100% - 40px); margin: 0 auto; padding: 25px 0 36px; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:25px; border-bottom:1px solid var(--line); }
+    .brand { display:flex; align-items:center; gap:11px; font-size:.82rem; font-weight:800; letter-spacing:.14em; }
+    .brand-mark { display:grid; place-items:center; width:33px; height:33px; border-radius:50%; background:var(--acid); color:var(--ink); font-size:1.1rem; letter-spacing:0; }
+    .privacy { display:flex; align-items:center; gap:8px; color:#d8d8c9; font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
+    .privacy-dot { width:7px; height:7px; border-radius:50%; background:var(--acid); box-shadow:0 0 12px #d6fb6580; }
+    .intro { padding:38px 0 28px; }
+    .eyebrow { color:var(--acid); font-size:.72rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { margin:10px 0 8px; font-size:clamp(2.1rem, 5vw, 3.5rem); line-height:.98; letter-spacing:-.06em; }
+    .intro p { max-width:560px; margin:0; color:var(--muted); font-size:1rem; line-height:1.6; }
+    .layout { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(310px, .9fr); gap:16px; align-items:stretch; }
+    .card { min-width:0; border:1px solid var(--line); border-radius:17px; background:linear-gradient(145deg, #1c1d19, #171815); }
+    .camera-card { padding:13px; }
+    .camera-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:4px 3px 13px; color:var(--muted); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; }
+    .live { display:inline-flex; align-items:center; gap:7px; }
+    .live::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--pink); }
+    .stage { position:relative; overflow:hidden; min-height:310px; aspect-ratio:4 / 3; border-radius:11px; background:radial-gradient(ellipse at center, #272820, #11120f 75%); }
+    .preview { position:absolute; inset:0; }
+    .preview.mirrored { transform:scaleX(-1); }
+    video, canvas { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; }
+    canvas { pointer-events:none; }
+    .empty { position:absolute; inset:0; display:grid; align-content:center; justify-items:center; gap:10px; padding:20px; color:var(--muted); text-align:center; }
+    .empty-icon { display:grid; place-items:center; width:56px; height:56px; border:1px solid #555747; border-radius:50%; color:var(--acid); font-size:1.5rem; }
+    .empty strong { color:#efeee7; font-size:1rem; font-weight:600; }
+    .empty span { max-width:280px; font-size:.85rem; line-height:1.5; }
+    .camera-foot { display:flex; justify-content:space-between; gap:12px; padding:12px 3px 2px; color:var(--muted); font-size:.78rem; }
+    .score-card { display:flex; flex-direction:column; padding:22px; }
+    .score-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .score-head h2 { margin:0; font-size:.8rem; letter-spacing:.13em; text-transform:uppercase; }
+    .test-length { color:var(--muted); font-size:.76rem; }
+    .score-wrap { display:grid; place-items:center; padding:26px 0 22px; }
+    .score-ring { --score-angle:0%; position:relative; display:grid; place-items:center; width:216px; aspect-ratio:1; border-radius:50%; background:conic-gradient(from 220deg, var(--acid) var(--score-angle), #34362f 0); transition:background .3s ease; }
+    .score-ring::before { content:""; position:absolute; inset:8px; border-radius:inherit; background:#191a17; }
+    .score-value { position:relative; z-index:1; text-align:center; }
+    .score-value strong { display:block; font-size:4.6rem; font-weight:650; line-height:1; letter-spacing:-.09em; }
+    .score-value span { display:block; margin-top:7px; color:var(--muted); font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; }
+    .result-label { min-height:25px; color:var(--acid); font-size:.95rem; font-weight:650; text-align:center; }
+    .level-row { display:flex; justify-content:space-between; gap:10px; margin:17px 0 7px; color:var(--muted); font-size:.72rem; }
+    .meter { height:8px; overflow:hidden; border-radius:9px; background:#33352e; }
+    .meter span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg, var(--acid), #ffcf55 62%, var(--pink)); transition:width .09s linear; }
+    .level-note { min-height:18px; margin-top:7px; color:var(--muted); font-size:.72rem; }
+    .actions { display:grid; gap:9px; margin-top:auto; padding-top:20px; }
+    .button { width:100%; border:1px solid #525447; border-radius:10px; padding:12px 15px; background:#252720; color:#f5f3eb; font-weight:650; transition:transform .16s ease, background .16s ease, opacity .16s ease; }
+    .button:hover:not(:disabled) { transform:translateY(-1px); background:#303228; }
+    .button:focus-visible, input:focus-visible + .switch-ui { outline:2px solid var(--acid); outline-offset:3px; }
+    .button:disabled { cursor:not-allowed; opacity:.48; }
+    .button.primary { border-color:var(--acid); background:var(--acid); color:#17180f; }
+    .button.primary:hover:not(:disabled) { background:#e4ff91; }
+    .quiet-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:15px; color:var(--muted); font-size:.8rem; }
+    .switch { position:relative; display:inline-flex; align-items:center; gap:9px; cursor:pointer; }
+    .switch input { position:absolute; opacity:0; }
+    .switch-ui { width:36px; height:20px; border:1px solid #5b5c51; border-radius:20px; background:#30312b; transition:background .15s ease; }
+    .switch-ui::after { content:""; display:block; width:14px; height:14px; margin:2px; border-radius:50%; background:#b8b8aa; transition:transform .15s ease, background .15s ease; }
+    .switch input:checked + .switch-ui { background:#647235; }
+    .switch input:checked + .switch-ui::after { transform:translateX(16px); background:var(--acid); }
+    .status { min-height:19px; margin:12px 0 0; color:var(--muted); font-size:.75rem; line-height:1.45; }
+    .bottom-note { display:flex; justify-content:center; gap:10px; margin:18px 0 0; color:var(--muted); font-size:.76rem; text-align:center; }
+    .bottom-note strong { color:#e4e3d9; font-weight:600; }
+    .quiet-mode .score-ring, .quiet-mode .button, .quiet-mode .meter span, .quiet-mode .switch-ui { transition:none; }
+    @media (max-width:760px) { .shell { width:min(100% - 28px, 560px); padding-top:18px; } .layout { grid-template-columns:1fr; } .stage { min-height:250px; } .score-card { min-height:530px; } }
+    @media (max-width:430px) { .privacy { font-size:.65rem; } .stage { min-height:220px; } .score-ring { width:190px; } .score-card { padding:18px; } .bottom-note { flex-direction:column; } }
+    @media (prefers-reduced-motion:reduce) { *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; } }
   </style>
 </head>
 <body>
-  <main>
-    <header><h1>Mirror</h1><span id="status" role="status" aria-live="polite">Camera is off</span></header>
-    <section class="stage" aria-label="Webcam preview with facial landmarks">
-      <div class="preview mirrored" id="preview">
-        <video id="video" autoplay playsinline muted hidden></video>
-        <canvas id="landmarks" aria-hidden="true"></canvas>
-      </div>
-      <div class="empty" id="empty"><strong>Your mirror is ready</strong><span>Start the camera to track facial landmarks</span></div>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">!</span><span>FEAR TEST</span></div>
+      <div class="privacy"><span class="privacy-dot" aria-hidden="true"></span>On-device by default</div>
+    </header>
+    <section class="intro">
+      <div class="eyebrow">A tiny challenge for your loudest scream</div>
+      <h1>How brave are<br>your vocal cords?</h1>
+      <p>Take a five-second scream test, get a playful score, and see if you can beat it. No sound effects. No uploads. Just you versus the meter.</p>
     </section>
-    <div class="controls">
-      <button class="primary" id="toggle" type="button">Start camera</button>
-      <label><input id="mirror" type="checkbox" checked><span>Mirror image</span></label>
-      <label><input id="show-landmarks" type="checkbox" checked><span>Show landmarks</span></label>
-    </div>
-    <p class="note">Face landmarks are detected in your browser. Camera video is not uploaded.</p>
+    <section class="layout" aria-label="Scream test">
+      <div class="card camera-card">
+        <div class="camera-head"><span>Live view</span><span class="live" id="live-label">Stand by</span></div>
+        <div class="stage">
+          <div class="preview mirrored" id="preview">
+            <video id="video" autoplay playsinline muted hidden></video>
+            <canvas id="landmarks" aria-hidden="true"></canvas>
+          </div>
+          <div class="empty" id="empty">
+            <span class="empty-icon" aria-hidden="true">◉</span>
+            <strong>Your camera stays yours</strong>
+            <span>Enable your camera for a live preview and optional face landmarks. You can take the sound test with microphone-only access.</span>
+          </div>
+        </div>
+        <div class="camera-foot"><span id="face-state">Face tracking is optional</span><span id="mode-label">Mic not connected</span></div>
+      </div>
+      <div class="card score-card">
+        <div class="score-head"><h2>Scream score</h2><span class="test-length">5 second test</span></div>
+        <div class="score-wrap">
+          <div class="score-ring" id="score-ring" role="img" aria-label="Score unavailable">
+            <div class="score-value"><strong id="score">--</strong><span>out of 100</span></div>
+          </div>
+        </div>
+        <div class="result-label" id="result-label">Ready when you are</div>
+        <div class="level-row"><span>Live mic level</span><span id="level-word">Waiting</span></div>
+        <div class="meter" role="meter" aria-label="Live microphone level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="level-bar"></span></div>
+        <div class="level-note" id="level-note">Your microphone level helps set the score.</div>
+        <div class="actions">
+          <button class="button primary" id="start-test" type="button">Start 5-second scream test</button>
+          <button class="button" id="camera-toggle" type="button">Enable camera preview</button>
+          <button class="button" id="stop-app" type="button" hidden>Turn off devices</button>
+        </div>
+        <div class="quiet-row">
+          <span>Less motion and no sound effects</span>
+          <label class="switch"><span>Quiet mode</span><input id="quiet" type="checkbox"><span class="switch-ui" aria-hidden="true"></span></label>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite">Your camera and microphone are off.</p>
+      </div>
+    </section>
+    <p class="bottom-note"><strong>For fun, not a scientific measurement.</strong><span>Scores vary with your microphone and room.</span></p>
   </main>
   <script type="module">
-    let mediaPipe;
-
     const video = document.querySelector('#video');
-    const preview = document.querySelector('#preview');
     const canvas = document.querySelector('#landmarks');
     const ctx = canvas.getContext('2d');
     const empty = document.querySelector('#empty');
     const status = document.querySelector('#status');
-    const toggle = document.querySelector('#toggle');
-    const mirror = document.querySelector('#mirror');
-    const showLandmarks = document.querySelector('#show-landmarks');
+    const liveLabel = document.querySelector('#live-label');
+    const faceState = document.querySelector('#face-state');
+    const modeLabel = document.querySelector('#mode-label');
+    const startTest = document.querySelector('#start-test');
+    const cameraToggle = document.querySelector('#camera-toggle');
+    const stopButton = document.querySelector('#stop-app');
+    const quiet = document.querySelector('#quiet');
+    const levelBar = document.querySelector('#level-bar');
+    const meter = document.querySelector('.meter');
+    const levelWord = document.querySelector('#level-word');
+    const levelNote = document.querySelector('#level-note');
+    const score = document.querySelector('#score');
+    const scoreRing = document.querySelector('#score-ring');
+    const resultLabel = document.querySelector('#result-label');
     const modelUrl = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+    const visionBase = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1';
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     let stream;
+    let audioContext;
+    let analyser;
+    let audioSamples;
     let landmarker;
+    let mediaPipe;
     let frameRequest;
     let lastVideoTime = -1;
-    let lastInferenceAt = 0;
+    let lastFaceAt = 0;
+    let challenge;
+    let peakRms = 0;
+    let cameraEnabled = false;
 
-    mirror.addEventListener('change', () => preview.classList.toggle('mirrored', mirror.checked));
-    showLandmarks.addEventListener('change', () => {
-      if (!showLandmarks.checked) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
+    function setStatus(message) { status.textContent = message; }
+    function clamp(value, low, high) { return Math.min(high, Math.max(low, value)); }
 
-    async function loadLandmarker() {
-      if (landmarker) return landmarker;
-      if (!mediaPipe) mediaPipe = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/vision_bundle.mjs');
+    async function setupAudio(audioStream) {
+      if (!AudioContextClass) throw new Error('Audio analysis is not supported in this browser.');
+      audioContext = new AudioContextClass();
+      await audioContext.resume();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.15;
+      const source = audioContext.createMediaStreamSource(audioStream);
+      source.connect(analyser);
+      audioSamples = new Float32Array(analyser.fftSize);
+    }
+
+    async function setupFaceLandmarker() {
+      if (landmarker) return;
+      if (!mediaPipe) mediaPipe = await import(visionBase + '/vision_bundle.mjs');
       const { FaceLandmarker, FilesetResolver } = mediaPipe;
-      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/wasm');
+      const vision = await FilesetResolver.forVisionTasks(visionBase + '/wasm');
       const options = {
         baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
         runningMode: 'VIDEO',
@@ -93,93 +198,265 @@
         options.baseOptions.delegate = 'CPU';
         landmarker = await FaceLandmarker.createFromOptions(vision, options);
       }
-      return landmarker;
+    }
+
+    function showCamera() {
+      video.srcObject = stream;
+      video.hidden = false;
+      empty.hidden = true;
+      video.play().catch(() => setStatus('Camera is connected, but playback was blocked by the browser.'));
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      cameraEnabled = true;
+      cameraToggle.textContent = 'Turn camera off';
+      liveLabel.textContent = 'Camera and mic on';
+      modeLabel.textContent = 'Camera + mic';
+      faceState.textContent = 'Loading optional face landmarks…';
+      setupFaceLandmarker().then(() => {
+        if (cameraEnabled) faceState.textContent = 'Looking for a face';
+      }).catch(() => {
+        faceState.textContent = 'Preview on · landmarks unavailable';
+      });
     }
 
     function drawLandmarks(faces) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (!showLandmarks.checked) return;
       for (const face of faces) {
         for (const point of face) {
           ctx.beginPath();
           ctx.arc(point.x * canvas.width, point.y * canvas.height, Math.max(1.2, canvas.width * 0.0018), 0, Math.PI * 2);
-          ctx.fillStyle = '#c9efb3';
+          ctx.fillStyle = '#d6fb65';
           ctx.fill();
         }
       }
     }
 
-    function trackFrame(now) {
-      if (!stream || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
-      if (video.currentTime !== lastVideoTime && now - lastInferenceAt >= 30) {
-        lastVideoTime = video.currentTime;
-        lastInferenceAt = now;
-        const result = landmarker.detectForVideo(video, now);
-        const faces = result.faceLandmarks || [];
-        drawLandmarks(faces);
-        status.textContent = faces.length ? 'Face tracked · ' + faces[0].length + ' landmarks' : 'Camera on · no face detected';
-      }
-      frameRequest = requestAnimationFrame(trackFrame);
+    function updateLevel(rms) {
+      const level = clamp(Math.round(rms * 360), 0, 100);
+      levelBar.style.width = level + '%';
+      meter.setAttribute('aria-valuenow', String(level));
+      levelWord.textContent = level < 4 ? 'Quiet' : level < 18 ? 'Low' : level < 42 ? 'Building' : level < 72 ? 'Loud' : 'Very loud';
+      if (challenge) peakRms = Math.max(peakRms, rms);
     }
 
-    function stopCamera() {
+    function finishChallenge() {
+      challenge = null;
+      const dbfs = peakRms > 0 ? 20 * Math.log10(peakRms) : -100;
+      const result = clamp(Math.round(((dbfs + 42) / 36) * 100), 0, 100);
+      score.textContent = String(result);
+      scoreRing.style.setProperty('--score-angle', result + '%');
+      scoreRing.setAttribute('aria-label', 'Score ' + result + ' out of 100');
+      if (result < 20) resultLabel.textContent = 'A quiet little shiver';
+      else if (result < 40) resultLabel.textContent = 'A proper spooky start';
+      else if (result < 60) resultLabel.textContent = 'That had some bite';
+      else if (result < 80) resultLabel.textContent = 'Terrifyingly loud';
+      else resultLabel.textContent = 'Nightmare fuel';
+      startTest.disabled = false;
+      startTest.textContent = 'Run it again';
+      setStatus('Test complete. Try again and see if you can top ' + result + '.');
+      levelNote.textContent = 'Relative mic level, not calibrated decibels.';
+    }
+
+    function scoreFrame(now) {
+      if (!stream) return;
+      if (analyser && audioSamples) {
+        analyser.getFloatTimeDomainData(audioSamples);
+        let sum = 0;
+        for (let i = 0; i < audioSamples.length; i++) sum += audioSamples[i] * audioSamples[i];
+        updateLevel(Math.sqrt(sum / audioSamples.length));
+      }
+      if (challenge) {
+        const remaining = Math.max(0, challenge.endsAt - now);
+        const seconds = Math.ceil(remaining / 1000);
+        resultLabel.textContent = seconds > 0 ? 'Scream now · ' + seconds + '…' : 'Scoring…';
+        startTest.textContent = seconds > 0 ? 'Test in progress · ' + seconds : 'Scoring…';
+        if (remaining <= 0) finishChallenge();
+      }
+      if (cameraEnabled && landmarker && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && now - lastFaceAt >= 50 && video.currentTime !== lastVideoTime) {
+        lastFaceAt = now;
+        lastVideoTime = video.currentTime;
+        try {
+          const result = landmarker.detectForVideo(video, now);
+          const faces = result.faceLandmarks || [];
+          drawLandmarks(faces);
+          faceState.textContent = faces.length ? faces[0].length + ' facial landmarks' : 'Looking for a face';
+          liveLabel.textContent = faces.length ? 'Face found' : 'Camera and mic on';
+        } catch {
+          faceState.textContent = 'Face tracking paused';
+        }
+      }
+      frameRequest = requestAnimationFrame(scoreFrame);
+    }
+
+    function startChallenge() {
+      if (!analyser || challenge) return;
+      peakRms = 0;
+      challenge = { endsAt: performance.now() + 5000 };
+      score.textContent = '--';
+      scoreRing.style.setProperty('--score-angle', '0%');
+      scoreRing.setAttribute('aria-label', 'Test in progress');
+      resultLabel.textContent = 'Ready…';
+      levelNote.textContent = 'Scream when the countdown starts.';
+      startTest.disabled = true;
+      setStatus('Five seconds. Give it your best scream.');
+    }
+
+    async function startMicrophone() {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone access is unavailable in this browser.');
+      let media;
+      try {
+        media = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+          video: { facingMode: 'user' }
+        });
+      } catch {
+        media = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+          video: false
+        });
+      }
+      stream = media;
+      try {
+        await setupAudio(stream);
+      } catch (error) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = undefined;
+        throw error;
+      }
+      stopButton.hidden = false;
+      if (stream.getVideoTracks().length) {
+        showCamera();
+        setStatus('Ready. Camera and microphone stay on this device.');
+      } else {
+        cameraEnabled = false;
+        liveLabel.textContent = 'Microphone only';
+        modeLabel.textContent = 'Mic-only mode';
+        faceState.textContent = 'Camera preview is optional';
+        cameraToggle.textContent = 'Enable camera preview';
+        setStatus('Mic-only mode is ready. Camera preview was unavailable.');
+      }
+      frameRequest = requestAnimationFrame(scoreFrame);
+    }
+
+    async function enableCameraPreview() {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      for (const track of cameraStream.getVideoTracks()) stream.addTrack(track);
+      showCamera();
+      setStatus('Camera preview enabled. Your media stays on this device.');
+    }
+
+    async function stopApp() {
       if (frameRequest) cancelAnimationFrame(frameRequest);
       frameRequest = undefined;
       if (stream) stream.getTracks().forEach(track => track.stop());
       stream = undefined;
+      analyser = undefined;
+      audioSamples = undefined;
+      challenge = null;
+      cameraEnabled = false;
+      if (audioContext && audioContext.state !== 'closed') await audioContext.close().catch(() => {});
+      audioContext = undefined;
+      if (landmarker) {
+        landmarker.close();
+        landmarker = undefined;
+      }
       video.srcObject = null;
       video.hidden = true;
       canvas.width = 0;
       canvas.height = 0;
       empty.hidden = false;
-      toggle.textContent = 'Start camera';
-      toggle.classList.add('primary');
-      status.textContent = 'Camera is off';
+      liveLabel.textContent = 'Stand by';
+      faceState.textContent = 'Face tracking is optional';
+      modeLabel.textContent = 'Mic not connected';
+      levelBar.style.width = '0%';
+      meter.setAttribute('aria-valuenow', '0');
+      levelWord.textContent = 'Waiting';
+      score.textContent = '--';
+      scoreRing.style.setProperty('--score-angle', '0%');
+      scoreRing.setAttribute('aria-label', 'Score unavailable');
+      resultLabel.textContent = 'Ready when you are';
+      levelNote.textContent = 'Your microphone level helps set the score.';
+      startTest.disabled = false;
+      startTest.textContent = 'Start 5-second scream test';
+      cameraToggle.disabled = false;
+      cameraToggle.textContent = 'Enable camera preview';
+      stopButton.hidden = true;
+      setStatus('Your camera and microphone are off.');
     }
 
-    toggle.addEventListener('click', async () => {
-      if (stream) { stopCamera(); return; }
-      if (!navigator.mediaDevices?.getUserMedia) {
-        status.textContent = 'Camera access is unavailable in this browser';
+    startTest.addEventListener('click', async () => {
+      if (challenge) return;
+      if (stream) {
+        startChallenge();
         return;
       }
-      toggle.disabled = true;
-      status.textContent = 'Waiting for camera permission…';
-      let cameraStream;
+      startTest.disabled = true;
+      cameraToggle.disabled = true;
+      setStatus('Waiting for microphone permission…');
       try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-        stream = cameraStream;
-        video.srcObject = stream;
-        await video.play();
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        video.hidden = false;
-        empty.hidden = true;
-        toggle.textContent = 'Stop camera';
-        toggle.classList.remove('primary');
-        status.textContent = 'Loading face landmark model…';
-        lastVideoTime = -1;
-        lastInferenceAt = 0;
-        try {
-          await loadLandmarker();
-          status.textContent = 'Looking for a face…';
-          frameRequest = requestAnimationFrame(trackFrame);
-        } catch {
-          status.textContent = 'Camera is on, but face tracking could not load. Check your connection and retry.';
-        }
+        await startMicrophone();
+        startChallenge();
       } catch (error) {
-        if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
-        stream = undefined;
-        video.srcObject = null;
-        status.textContent = error.name === 'NotAllowedError'
-          ? 'Allow camera access in your browser to continue'
-          : 'Could not start the camera';
+        setStatus(error.name === 'NotAllowedError' ? 'Allow microphone access in your browser to continue.' : error.message || 'Could not start the microphone.');
       } finally {
-        toggle.disabled = false;
+        startTest.disabled = Boolean(challenge);
+        cameraToggle.disabled = false;
       }
     });
 
-    window.addEventListener('pagehide', stopCamera);
+    cameraToggle.addEventListener('click', async () => {
+      if (!stream) {
+        startTest.disabled = true;
+        cameraToggle.disabled = true;
+        setStatus('Waiting for camera and microphone permission…');
+        try {
+          await startMicrophone();
+        } catch (error) {
+          setStatus(error.name === 'NotAllowedError' ? 'Allow microphone access in your browser to continue.' : error.message || 'Could not start the microphone.');
+        } finally {
+          startTest.disabled = false;
+          cameraToggle.disabled = false;
+        }
+        return;
+      }
+      if (cameraEnabled) {
+        stream.getVideoTracks().forEach(track => {
+          track.stop();
+          stream.removeTrack(track);
+        });
+        cameraEnabled = false;
+        video.srcObject = null;
+        video.hidden = true;
+        canvas.width = 0;
+        canvas.height = 0;
+        empty.hidden = false;
+        cameraToggle.textContent = 'Enable camera preview';
+        liveLabel.textContent = 'Microphone only';
+        modeLabel.textContent = 'Mic-only mode';
+        faceState.textContent = 'Camera preview is off';
+        setStatus('Camera stopped. The microphone test is still ready.');
+        return;
+      }
+      cameraToggle.disabled = true;
+      try {
+        await enableCameraPreview();
+      } catch (error) {
+        setStatus(error.name === 'NotAllowedError' ? 'Allow camera access in your browser to continue.' : 'Could not start camera preview.');
+      } finally {
+        cameraToggle.disabled = false;
+      }
+    });
+
+    stopButton.addEventListener('click', () => { stopApp(); });
+    quiet.addEventListener('change', () => {
+      document.body.classList.toggle('quiet-mode', quiet.checked);
+    });
+
+    window.addEventListener('pagehide', () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (landmarker) landmarker.close();
+      if (audioContext && audioContext.state !== 'closed') audioContext.close();
+    });
   </script>
 </body>
 </html>
