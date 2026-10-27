@@ -38,6 +38,14 @@
     .empty-icon { display:grid; place-items:center; width:56px; height:56px; border:1px solid #555747; border-radius:50%; color:var(--acid); font-size:1.5rem; }
     .empty strong { color:#efeee7; font-size:1rem; font-weight:600; }
     .empty span { max-width:280px; font-size:.85rem; line-height:1.5; }
+    .face-readout { margin-top:12px; padding:13px; border:1px solid var(--line); border-radius:11px; background:#141511; }
+    .face-readout[hidden] { display:none; }
+    .face-readout-head { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--muted); font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; }
+    .face-readout-head strong { color:var(--acid); font-size:.9rem; letter-spacing:0; }
+    .face-cues { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+    .face-cue { border:1px solid #42443a; border-radius:999px; padding:5px 9px; color:#929387; font-size:.72rem; }
+    .face-cue.active { border-color:#8ca43f; background:#293019; color:#e5f5b5; }
+    .face-note { margin:10px 0 0; color:var(--muted); font-size:.7rem; line-height:1.45; }
     .camera-foot { display:flex; justify-content:space-between; gap:12px; padding:12px 3px 2px; color:var(--muted); font-size:.78rem; }
     .score-card { display:flex; flex-direction:column; padding:22px; }
     .score-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
@@ -102,6 +110,15 @@
             <span>Enable your camera for a live preview and optional face landmarks. You can take the sound test with microphone-only access.</span>
           </div>
         </div>
+        <div class="face-readout" id="face-readout" hidden aria-live="polite">
+          <div class="face-readout-head"><span>Expression scare estimate</span><strong><span id="face-score">--</span>/100</strong></div>
+          <div class="face-cues">
+            <span class="face-cue" id="cue-mouth">Mouth open</span>
+            <span class="face-cue" id="cue-brow">Brows lowered</span>
+            <span class="face-cue" id="cue-eyes">Eyes widened</span>
+          </div>
+          <p class="face-note">Uses expression cues from facial landmarks. An open mouth can suggest teeth may show, but teeth visibility and emotions like anger are not reliably detected.</p>
+        </div>
         <div class="camera-foot"><span id="face-state">Face tracking is optional</span><span id="mode-label">Mic not connected</span></div>
       </div>
       <div class="card score-card">
@@ -149,6 +166,11 @@
     const score = document.querySelector('#score');
     const scoreRing = document.querySelector('#score-ring');
     const resultLabel = document.querySelector('#result-label');
+    const faceReadout = document.querySelector('#face-readout');
+    const faceScoreDisplay = document.querySelector('#face-score');
+    const cueMouth = document.querySelector('#cue-mouth');
+    const cueBrow = document.querySelector('#cue-brow');
+    const cueEyes = document.querySelector('#cue-eyes');
     const modelUrl = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
     const visionBase = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1';
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -163,6 +185,8 @@
     let lastFaceAt = 0;
     let challenge;
     let peakRms = 0;
+    let faceScoreTotal = 0;
+    let faceScoreSamples = 0;
     let cameraEnabled = false;
 
     function setStatus(message) { status.textContent = message; }
@@ -189,6 +213,7 @@
         baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
         runningMode: 'VIDEO',
         numFaces: 1,
+        outputFaceBlendshapes: true,
         minFaceDetectionConfidence: 0.5,
         minFacePresenceConfidence: 0.5,
         minTrackingConfidence: 0.5
@@ -209,6 +234,7 @@
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       cameraEnabled = true;
+      faceReadout.hidden = false;
       cameraToggle.textContent = 'Turn camera off';
       liveLabel.textContent = 'Camera and mic on';
       modeLabel.textContent = 'Camera + mic';
@@ -243,7 +269,12 @@
     function finishChallenge() {
       challenge = null;
       const dbfs = peakRms > 0 ? 20 * Math.log10(peakRms) : -100;
-      const result = clamp(Math.round(((dbfs + 42) / 36) * 100), 0, 100);
+      const soundScore = clamp(Math.round(((dbfs + 42) / 36) * 100), 0, 100);
+      const hasFaceScore = faceScoreSamples >= 5;
+      const averageFaceScore = hasFaceScore ? Math.round(faceScoreTotal / faceScoreSamples) : 0;
+      const result = hasFaceScore
+        ? Math.round(soundScore * 0.55 + averageFaceScore * 0.45)
+        : soundScore;
       score.textContent = String(result);
       scoreRing.style.setProperty('--score-angle', result + '%');
       scoreRing.setAttribute('aria-label', 'Score ' + result + ' out of 100');
@@ -255,7 +286,47 @@
       startTest.disabled = false;
       startTest.textContent = 'Run it again';
       setStatus('Test complete. Try again and see if you can top ' + result + '.');
-      levelNote.textContent = 'Relative mic level, not calibrated decibels.';
+      levelNote.textContent = hasFaceScore
+        ? '55% sound level + 45% facial expression cues. Playful estimate only.'
+        : 'Sound-level score only; turn on camera for facial expression cues.';
+    }
+
+    function readBlendshape(categories, name) {
+      return categories.find(category => category.categoryName === name)?.score || 0;
+    }
+
+    function setCue(element, active) {
+      element.classList.toggle('active', active);
+    }
+
+    function updateFaceReadout(result) {
+      const faces = result.faceLandmarks || [];
+      if (!faces.length) {
+        faceState.textContent = 'Looking for a face';
+        liveLabel.textContent = 'Camera and mic on';
+        faceScoreDisplay.textContent = '--';
+        setCue(cueMouth, false);
+        setCue(cueBrow, false);
+        setCue(cueEyes, false);
+        return;
+      }
+
+      const categories = result.faceBlendshapes?.[0]?.categories || [];
+      const jawOpen = readBlendshape(categories, 'jawOpen');
+      const browLowered = (readBlendshape(categories, 'browDownLeft') + readBlendshape(categories, 'browDownRight')) / 2;
+      const eyesWide = (readBlendshape(categories, 'eyeWideLeft') + readBlendshape(categories, 'eyeWideRight')) / 2;
+      const expressionScore = clamp(Math.round((jawOpen * 0.45 + browLowered * 0.35 + eyesWide * 0.2) * 100), 0, 100);
+
+      faceScoreDisplay.textContent = String(expressionScore);
+      setCue(cueMouth, jawOpen >= 0.35);
+      setCue(cueBrow, browLowered >= 0.25);
+      setCue(cueEyes, eyesWide >= 0.25);
+      faceState.textContent = [jawOpen >= 0.35 ? 'Mouth open' : '', browLowered >= 0.25 ? 'Brows lowered' : '', eyesWide >= 0.25 ? 'Eyes widened' : ''].filter(Boolean).join(' · ') || 'Face landmarks tracking';
+      liveLabel.textContent = 'Face found';
+      if (challenge) {
+        faceScoreTotal += expressionScore;
+        faceScoreSamples++;
+      }
     }
 
     function scoreFrame(now) {
@@ -280,8 +351,7 @@
           const result = landmarker.detectForVideo(video, now);
           const faces = result.faceLandmarks || [];
           drawLandmarks(faces);
-          faceState.textContent = faces.length ? faces[0].length + ' facial landmarks' : 'Looking for a face';
-          liveLabel.textContent = faces.length ? 'Face found' : 'Camera and mic on';
+          updateFaceReadout(result);
         } catch {
           faceState.textContent = 'Face tracking paused';
         }
@@ -292,6 +362,8 @@
     function startChallenge() {
       if (!analyser || challenge) return;
       peakRms = 0;
+      faceScoreTotal = 0;
+      faceScoreSamples = 0;
       challenge = { endsAt: performance.now() + 5000 };
       score.textContent = '--';
       scoreRing.style.setProperty('--score-angle', '0%');
@@ -355,6 +427,7 @@
       audioSamples = undefined;
       challenge = null;
       cameraEnabled = false;
+      faceReadout.hidden = true;
       if (audioContext && audioContext.state !== 'closed') await audioContext.close().catch(() => {});
       audioContext = undefined;
       if (landmarker) {
@@ -426,6 +499,7 @@
           stream.removeTrack(track);
         });
         cameraEnabled = false;
+        faceReadout.hidden = true;
         video.srcObject = null;
         video.hidden = true;
         canvas.width = 0;
