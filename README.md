@@ -6,9 +6,11 @@ An original browser-based scream challenge and computer-vision demo. The product
 
 - Five-second microphone challenge with a playful relative scream score.
 - Live microphone-level meter.
-- Optional webcam preview and on-device MediaPipe facial landmarks.
+- Optional webcam preview and on-device MediaPipe facial landmarks with mouth-opening, brow-lowering, and eye-widening cues.
+- When a face is tracked during the challenge, the playful final score combines sound level (55%) and facial expression cues (45%); otherwise it uses sound alone.
 - Microphone-only fallback when camera access is unavailable.
-- No audio/video recording or upload in the MVP; the score is not a calibrated decibel measurement.
+- No audio/video recording or upload in the MVP. The score is an entertainment estimate, not a calibrated decibel measurement.
+- Facial cues cannot reliably detect whether teeth are visible or determine emotions such as anger.
 
 ## Development
 
