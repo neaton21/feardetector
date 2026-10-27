@@ -8,12 +8,13 @@ Build an original browser-based scream challenge inspired by the simple “screa
 
 - Five-second scream test with a playful 0–100 score.
 - Live microphone level meter and short result labels.
-- Optional local webcam preview and on-device MediaPipe facial landmarks.
+- Optional local webcam preview and on-device MediaPipe facial landmarks with mouth-opening, brow-lowering, and eye-widening cues.
+- When a face is tracked during the challenge, the final entertainment score combines sound level (55%) and facial expression cues (45%); otherwise it uses sound alone.
 - Microphone-only mode if camera access is unavailable.
 - Quiet mode that reduces interface motion; no sound effects.
 - Camera and microphone access begins only after a user action.
 - Audio is analyzed as a live level signal. The app does not record or upload audio or video.
-- The score is an entertainment estimate affected by microphone gain and room acoustics, not a calibrated sound-pressure measurement.
+- The score is an entertainment estimate affected by microphone gain, room acoustics, and expression cues, not a calibrated sound-pressure measurement. It cannot reliably identify visible teeth or determine emotions such as anger.
 
 ## Next steps
 
